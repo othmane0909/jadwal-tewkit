@@ -1,0 +1,71 @@
+# ═══════════════════════════════════════════════════
+#  جداول التوقيت — إعدادات الأمان (Apache)
+# ═══════════════════════════════════════════════════
+
+# ── إعادة التوجيه إلى HTTPS إلزامياً ───────────────
+RewriteEngine On
+RewriteCond %{HTTPS} off
+RewriteRule ^ https://%{HTTP_HOST}%{REQUEST_URI} [R=301,L]
+
+# ── ترويسات الأمان ──────────────────────────────────
+<IfModule mod_headers.c>
+    # منع تضمين الصفحة داخل iframe من مواقع أخرى
+    Header always set X-Frame-Options "SAMEORIGIN"
+
+    # منع تخمين نوع الملف (MIME sniffing)
+    Header always set X-Content-Type-Options "nosniff"
+
+    # تفعيل حماية XSS في المتصفحات القديمة
+    Header always set X-XSS-Protection "1; mode=block"
+
+    # التحكم في معلومات المرجع المُرسلة
+    Header always set Referrer-Policy "strict-origin-when-cross-origin"
+
+    # تعطيل الميزات الحساسة غير المستخدمة
+    Header always set Permissions-Policy "camera=(), microphone=(), geolocation=(), payment=()"
+
+    # إلزام HTTPS لمدة سنة (فعّل فقط بعد التأكد من عمل HTTPS)
+    Header always set Strict-Transport-Security "max-age=31536000; includeSubDomains"
+
+    # سياسة أمان المحتوى: تحدد المصادر المسموح بها بدقة
+    Header always set Content-Security-Policy "default-src 'self'; script-src 'self' https://cdnjs.cloudflare.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; connect-src 'self' https://script.google.com https://script.googleusercontent.com; frame-src 'self'; object-src 'none'; base-uri 'self'; form-action 'none';"
+
+    # إخفاء إصدار الخادم
+    Header always unset X-Powered-By
+    Header always unset Server
+</IfModule>
+
+# ── تعطيل تصفح المجلدات ─────────────────────────────
+Options -Indexes
+
+# ── حماية الملفات الحساسة ───────────────────────────
+<FilesMatch "\.(htaccess|htpasswd|env|git|log|bak|sql|conf|ini|sh)$">
+    Require all denied
+</FilesMatch>
+
+# ── CORS للصور (ضروري لـ html2canvas عند توليد PDF) ──
+<IfModule mod_headers.c>
+    <FilesMatch "\.(png|jpg|jpeg|gif|svg|ico|webp)$">
+        Header set Access-Control-Allow-Origin "*"
+        Header append Vary Origin
+    </FilesMatch>
+</IfModule>
+
+# ── تخزين مؤقت للملفات الثابتة (تسريع التحميل) ─────
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresByType text/css               "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType image/png              "access plus 6 months"
+    ExpiresByType image/jpeg             "access plus 6 months"
+    ExpiresByType image/svg+xml          "access plus 6 months"
+    ExpiresByType image/x-icon           "access plus 1 year"
+</IfModule>
+
+# ── ضغط الاستجابات (تسريع التحميل) ─────────────────
+<IfModule mod_deflate.c>
+    AddOutputFilterByType DEFLATE text/html text/css application/javascript
+</IfModule>
+
+# ── الصفحة الافتراضية ───────────────────────────────
+DirectoryIndex index.html
